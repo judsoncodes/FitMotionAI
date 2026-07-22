@@ -113,6 +113,16 @@ class AuthViewModel extends StateNotifier<AuthViewModelState> {
     }
   }
 
+  Future<bool> signInAsDemoUser() async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    final demoState = AuthState.authenticated(
+      userId: 'demo_user_001',
+      email: 'demo.athlete@fitmotion.ai',
+    );
+    state = state.copyWith(authState: demoState, isLoading: false);
+    return true;
+  }
+
   Future<void> signOut() async {
     state = state.copyWith(isLoading: true);
     await _repository.signOut();

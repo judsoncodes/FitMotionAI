@@ -11,10 +11,42 @@ final userRepositoryProvider = Provider<UserRepository>((ref) {
 });
 
 final userProfileProvider = StreamProvider<UserProfile?>((ref) {
-  final authState = ref.watch(authStateChangesProvider).value;
-  if (authState == null || !authState.isAuthenticated || authState.userId == null) {
+  final authState = ref.watch(authStateChangesProvider).value ?? ref.watch(authViewModelProvider).authState;
+  if (!authState.isAuthenticated || authState.userId == null) {
     return Stream.value(null);
   }
+
+  if (authState.userId == 'demo_user_001') {
+    final now = DateTime.now();
+    return Stream.value(
+      UserProfile(
+        uid: 'demo_user_001',
+        email: 'demo.athlete@fitmotion.ai',
+        displayName: 'Demo Athlete',
+        createdAt: now,
+        age: 27,
+        sex: 'female',
+        heightCm: 168,
+        weightKg: 62,
+        fitnessLevel: FitnessLevel.intermediate,
+        primaryGoal: PrimaryGoal.muscleGain,
+        daysPerWeek: 4,
+        sessionDurationMinutes: 45,
+        equipmentAccess: const [EquipmentAccess.dumbbells, EquipmentAccess.none],
+        hasInjuries: true,
+        injuryDetails: const [
+          InjuryDetail(
+            bodyPart: BodyPart.shoulder,
+            severity: InjurySeverity.medium,
+            notes: 'Right rotator cuff discomfort',
+          ),
+        ],
+        onboardingComplete: true,
+        lastActive: now,
+      ),
+    );
+  }
+
   final userRepository = ref.watch(userRepositoryProvider);
   return userRepository.userProfileStream(authState.userId!);
 });

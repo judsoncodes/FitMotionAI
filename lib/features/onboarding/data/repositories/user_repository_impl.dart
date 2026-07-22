@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../domain/models/user_profile.dart';
-import '../domain/repositories/user_repository.dart';
+import '../../domain/models/user_profile.dart';
+import '../../domain/repositories/user_repository.dart';
 
 class UserRepositoryImpl implements UserRepository {
   final FirebaseFirestore _firestore;
@@ -21,12 +21,16 @@ class UserRepositoryImpl implements UserRepository {
             SetOptions(merge: true),
           );
     } catch (_) {
-      // Memory fallback if Firestore native SDK is uninitialized/offline
+      // In-memory fallback if Firestore offline
     }
   }
 
   @override
   Future<UserProfile?> getUserProfile(String uid) async {
+    if (_memoryCache.containsKey(uid)) {
+      return _memoryCache[uid];
+    }
+
     try {
       final doc = await _usersCollection.doc(uid).get();
       if (doc.exists && doc.data() != null) {
@@ -34,21 +38,34 @@ class UserRepositoryImpl implements UserRepository {
         _memoryCache[uid] = profile;
         return profile;
       }
-    } catch (_) {}
+    } catch (_) {
+      // Fallback
+    }
+
     return _memoryCache[uid];
   }
 
   @override
   Stream<UserProfile?> userProfileStream(String uid) {
     try {
-      return _usersCollection.doc(uid).snapshots().map((snapshot) {
-        if (snapshot.exists && snapshot.data() != null) {
-          final profile = UserProfile.fromMap(snapshot.data()!);
-          _memoryCache[uid] = profile;
-          return profile;
-        }
-        return _memoryCache[uid];
-      });
+      return _usersCollection
+          .doc(uid)
+          .snapshots()
+          .map<UserProfile?>((snapshot) {
+            if (snapshot.exists && snapshot.data() != null) {
+              final profile = UserProfile.fromMap(snapshot.data()!);
+              _memoryCache[uid] = profile;
+              return profile;
+            }
+            return _memoryCache[uid];
+          })
+          .timeout(
+            const Duration(seconds: 3),
+            onTimeout: (sink) {
+              sink.add(_memoryCache[uid]);
+            },
+          )
+          .handleError((_) => _memoryCache[uid]);
     } catch (_) {
       return Stream.value(_memoryCache[uid]);
     }

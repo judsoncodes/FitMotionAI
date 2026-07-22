@@ -63,7 +63,6 @@ class AppTheme {
         foregroundColor: lightOnBackground,
         elevation: 0,
         centerTitle: true,
-        scaffoldColorScheme: colorScheme,
         iconTheme: IconThemeData(color: lightOnBackground),
         titleTextStyle: TextStyle(
           color: lightOnBackground,
@@ -74,7 +73,7 @@ class AppTheme {
       ),
 
       // Card Theme
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: lightSurface,
         elevation: 1,
         shadowColor: Colors.black.withOpacity(0.05),
@@ -174,7 +173,6 @@ class AppTheme {
         foregroundColor: darkOnBackground,
         elevation: 0,
         centerTitle: true,
-        scaffoldColorScheme: colorScheme,
         iconTheme: IconThemeData(color: darkOnBackground),
         titleTextStyle: TextStyle(
           color: darkOnBackground,
@@ -185,7 +183,7 @@ class AppTheme {
       ),
 
       // Card Theme
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: darkSurface,
         elevation: 0,
         shape: RoundedRectangleBorder(

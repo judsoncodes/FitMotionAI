@@ -1,5 +1,3 @@
-import 'dart:async';
-import 'package:firebase_auth/firebase_auth me' if (dart.library.io) 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -9,13 +7,21 @@ import '../domain/auth_state.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   final FirebaseAuth _firebaseAuth;
-  final GoogleSignIn _googleSignIn;
+  final GoogleSignIn? _googleSignIn;
 
   AuthRepositoryImpl({
     FirebaseAuth? firebaseAuth,
     GoogleSignIn? googleSignIn,
   })  : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
-        _googleSignIn = googleSignIn ?? GoogleSignIn();
+        _googleSignIn = googleSignIn ?? _initGoogleSignIn();
+
+  static GoogleSignIn? _initGoogleSignIn() {
+    try {
+      return GoogleSignIn();
+    } catch (_) {
+      return null;
+    }
+  }
 
   @override
   Stream<AuthState> get authStateChanges {
@@ -109,7 +115,8 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<AuthState> signInWithGoogle() async {
     try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      final googleInstance = _googleSignIn ?? GoogleSignIn();
+      final GoogleSignInAccount? googleUser = await googleInstance.signIn();
       if (googleUser == null) {
         throw const AuthFailure('Google sign-in was cancelled by user.', code: 'canceled');
       }
@@ -142,9 +149,7 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<void> signOut() async {
     try {
-      await _googleSignIn.signOut();
-    } catch (_) {}
-    try {
+      await _googleSignIn?.signOut();
       await _firebaseAuth.signOut();
     } catch (_) {}
   }

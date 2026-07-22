@@ -179,6 +179,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       isLoading: authViewModel.isLoading,
                       onPressed: authViewModel.isLoading ? null : _submitGoogleSignIn,
                     ),
+                    const SizedBox(height: 12),
+                    AppButton(
+                      text: '⚡ Instant Demo Access (Explore Step 4)',
+                      variant: AppButtonVariant.outlined,
+                      icon: Icons.auto_awesome_rounded,
+                      isLoading: authViewModel.isLoading,
+                      onPressed: authViewModel.isLoading
+                          ? null
+                          : () {
+                              ref.read(authViewModelProvider.notifier).signInAsDemoUser();
+                            },
+                    ),
                   ],
                 ),
               ),

@@ -50,6 +50,48 @@ class UserProfile {
     required this.lastActive,
   });
 
+  UserProfile copyWith({
+    String? uid,
+    String? email,
+    String? displayName,
+    DateTime? createdAt,
+    int? age,
+    String? sex,
+    double? heightCm,
+    double? weightKg,
+    FitnessLevel? fitnessLevel,
+    PrimaryGoal? primaryGoal,
+    int? daysPerWeek,
+    int? sessionDurationMinutes,
+    List<EquipmentAccess>? equipmentAccess,
+    bool? hasInjuries,
+    List<InjuryDetail>? injuryDetails,
+    String? medicalConditions,
+    bool? onboardingComplete,
+    DateTime? lastActive,
+  }) {
+    return UserProfile(
+      uid: uid ?? this.uid,
+      email: email ?? this.email,
+      displayName: displayName ?? this.displayName,
+      createdAt: createdAt ?? this.createdAt,
+      age: age ?? this.age,
+      sex: sex ?? this.sex,
+      heightCm: heightCm ?? this.heightCm,
+      weightKg: weightKg ?? this.weightKg,
+      fitnessLevel: fitnessLevel ?? this.fitnessLevel,
+      primaryGoal: primaryGoal ?? this.primaryGoal,
+      daysPerWeek: daysPerWeek ?? this.daysPerWeek,
+      sessionDurationMinutes: sessionDurationMinutes ?? this.sessionDurationMinutes,
+      equipmentAccess: equipmentAccess ?? this.equipmentAccess,
+      hasInjuries: hasInjuries ?? this.hasInjuries,
+      injuryDetails: injuryDetails ?? this.injuryDetails,
+      medicalConditions: medicalConditions ?? this.medicalConditions,
+      onboardingComplete: onboardingComplete ?? this.onboardingComplete,
+      lastActive: lastActive ?? this.lastActive,
+    );
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'uid': uid,
