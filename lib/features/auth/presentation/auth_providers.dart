@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/auth_repository_impl.dart';
+import '../domain/auth_failure.dart';
 import '../domain/auth_repository.dart';
 import '../domain/auth_state.dart';
 
@@ -7,33 +8,120 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepositoryImpl();
 });
 
-class AuthStateNotifier extends StateNotifier<AuthState> {
-  final AuthRepository _authRepository;
+final authStateChangesProvider = StreamProvider<AuthState>((ref) {
+  final repository = ref.watch(authRepositoryProvider);
+  return repository.authStateChanges;
+});
 
-  AuthStateNotifier(this._authRepository) : super(AuthState.initial()) {
-    checkAuthState();
-  }
+class AuthViewModelState {
+  final AuthState authState;
+  final bool isLoading;
+  final String? errorMessage;
 
-  Future<void> checkAuthState() async {
-    state = AuthState.initial();
-    state = await _authRepository.checkAuthState();
-  }
+  const AuthViewModelState({
+    required this.authState,
+    this.isLoading = false,
+    this.errorMessage,
+  });
 
-  Future<void> login(String email, String password) async {
-    state = await _authRepository.login(email, password);
-  }
+  factory AuthViewModelState.initial() => AuthViewModelState(
+        authState: AuthState.initial(),
+      );
 
-  Future<void> signup(String email, String password) async {
-    state = await _authRepository.signup(email, password);
-  }
-
-  Future<void> logout() async {
-    await _authRepository.logout();
-    state = AuthState.unauthenticated();
+  AuthViewModelState copyWith({
+    AuthState? authState,
+    bool? isLoading,
+    String? errorMessage,
+    bool clearError = false,
+  }) {
+    return AuthViewModelState(
+      authState: authState ?? this.authState,
+      isLoading: isLoading ?? this.isLoading,
+      errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+    );
   }
 }
 
-final authStateProvider = StateNotifierProvider<AuthStateNotifier, AuthState>((ref) {
+class AuthViewModel extends StateNotifier<AuthViewModelState> {
+  final AuthRepository _repository;
+
+  AuthViewModel(this._repository)
+      : super(AuthViewModelState(authState: _repository.currentAuthState));
+
+  void clearError() {
+    state = state.copyWith(clearError: true);
+  }
+
+  Future<bool> signInWithEmail(String email, String password) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      final authState = await _repository.signInWithEmail(
+        email: email,
+        password: password,
+      );
+      state = state.copyWith(authState: authState, isLoading: false);
+      return true;
+    } on AuthFailure catch (e) {
+      state = state.copyWith(isLoading: false, errorMessage: e.message);
+      return false;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'An unexpected error occurred: ${e.toString()}',
+      );
+      return false;
+    }
+  }
+
+  Future<bool> signUpWithEmail(String email, String password, {String? displayName}) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      final authState = await _repository.signUpWithEmail(
+        email: email,
+        password: password,
+        displayName: displayName,
+      );
+      state = state.copyWith(authState: authState, isLoading: false);
+      return true;
+    } on AuthFailure catch (e) {
+      state = state.copyWith(isLoading: false, errorMessage: e.message);
+      return false;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'An unexpected error occurred: ${e.toString()}',
+      );
+      return false;
+    }
+  }
+
+  Future<bool> signInWithGoogle() async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      final authState = await _repository.signInWithGoogle();
+      state = state.copyWith(authState: authState, isLoading: false);
+      return true;
+    } on AuthFailure catch (e) {
+      state = state.copyWith(isLoading: false, errorMessage: e.message);
+      return false;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Google Sign-In failed: ${e.toString()}',
+      );
+      return false;
+    }
+  }
+
+  Future<void> signOut() async {
+    state = state.copyWith(isLoading: true);
+    await _repository.signOut();
+    state = AuthViewModelState(authState: AuthState.unauthenticated());
+  }
+}
+
+final authViewModelProvider =
+    StateNotifierProvider<AuthViewModel, AuthViewModelState>((ref) {
   final repository = ref.watch(authRepositoryProvider);
-  return AuthStateNotifier(repository);
+  return AuthViewModel(repository);
 });

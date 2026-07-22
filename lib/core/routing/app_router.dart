@@ -2,16 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../features/auth/domain/auth_state.dart';
 import '../../features/auth/presentation/auth_providers.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/signup_screen.dart';
 import '../../features/auth/presentation/splash_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
+import '../../features/onboarding/presentation/onboarding_providers.dart';
 import '../../features/onboarding/presentation/onboarding_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authStateProvider);
+  final authStateAsync = ref.watch(authStateChangesProvider);
+  final userProfileAsync = ref.watch(userProfileProvider);
 
   return GoRouter(
     initialLocation: '/splash',
@@ -44,21 +45,32 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
     redirect: (context, state) {
       final isSplash = state.matchedLocation == '/splash';
-      final isLoggingIn = state.matchedLocation == '/login' || state.matchedLocation == '/signup';
-      final isAuthenticated = authState.isAuthenticated;
-      final isInitial = authState.status == AuthStatus.initial;
+      final isLoggingIn =
+          state.matchedLocation == '/login' || state.matchedLocation == '/signup';
+      final isOnboarding = state.matchedLocation == '/onboarding';
 
-      if (isInitial) {
+      final authState = authStateAsync.asData?.value;
+      if (authState == null) {
         return isSplash ? null : '/splash';
       }
 
+      final isAuthenticated = authState.isAuthenticated;
       if (!isAuthenticated) {
         if (isLoggingIn) return null;
         return '/login';
       }
 
-      // If authenticated and trying to go to splash or login/signup
-      if (isSplash || isLoggingIn) {
+      // User is authenticated, check profile onboarding status
+      final userProfile = userProfileAsync.asData?.value;
+      final onboardingComplete = userProfile?.onboardingComplete ?? false;
+
+      if (!onboardingComplete) {
+        if (isOnboarding) return null;
+        return '/onboarding';
+      }
+
+      // User is authenticated and onboarding is complete
+      if (isSplash || isLoggingIn || isOnboarding) {
         return '/home';
       }
 

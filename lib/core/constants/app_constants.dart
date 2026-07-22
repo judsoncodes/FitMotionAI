@@ -11,4 +11,8 @@ class AppConstants {
 
   // Storage Keys
   static const String themeKey = 'app_theme_mode';
+
+  // Supabase Project Credentials (Paste your project URL & Anon Key from Supabase Dashboard)
+  static const String supabaseUrl = 'https://YOUR_SUPABASE_PROJECT_ID.supabase.co';
+  static const String supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY';
 }
