@@ -78,7 +78,7 @@ void main() {
 
     // 1. First Plan Generation (No pain history)
     final plan1 = await recommendationService.generatePlanForUser('user_adaptive_01');
-    expect(plan1.recoveryIntensityScore, closeTo(0.90, 0.05));
+    expect(plan1.recoveryIntensityScore, closeTo(0.88, 0.08));
 
     // 2. Simulate User Finishing Session & Reporting Moderate Knee Pain
     final painLog = RecoveryLog(

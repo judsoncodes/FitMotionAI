@@ -2,80 +2,180 @@ const fs = require('fs');
 const path = require('path');
 
 /**
- * FitMotionAI - Synthetic Athlete Recovery Model Generator
- * Generates 3,000 athlete rows, evaluates RMSE/MAE metrics,
- * and saves data/synthetic_recovery_dataset.csv.
+ * FitMotionAI - Real Gradient Boosted Decision Tree Regressor Training Script
+ * Reads data/synthetic_recovery_dataset.csv, performs 80/20 Train/Test split,
+ * trains an Ensemble Gradient Boosted Tree model on 2,400 training rows,
+ * evaluates on 600 test rows (RMSE/MAE), and exports assets/ml/recovery_model_params.json.
  */
-function generateDataset(numSamples = 3000) {
-  const rows = [];
-  const header = ['avg_difficulty', 'avg_completion', 'recent_pain_count', 'days_since_last', 'pain_severity_weight', 'target_recovery_score'];
-  rows.push(header.join(','));
 
-  let totalSquaredError = 0;
-  let totalAbsoluteError = 0;
+// Simple Decision Stump Trainer
+function trainStump(X, y, weights) {
+  let bestFeature = 0;
+  let bestThreshold = 0;
+  let bestLeftVal = 0;
+  let bestRightVal = 0;
+  let minError = Infinity;
 
-  for (let i = 0; i < numSamples; i++) {
-    // Feature 0: averageDifficultyRating (1.0 to 5.0)
-    const avgDifficulty = parseFloat((1.0 + Math.random() * 4.0).toFixed(2));
+  const numFeatures = X[0].length;
+  const numSamples = X.length;
 
-    // Feature 1: averageCompletionRate (0.2 to 1.0)
-    const avgCompletion = parseFloat((0.4 + Math.random() * 0.6).toFixed(2));
+  for (let f = 0; f < numFeatures; f++) {
+    // Collect feature values
+    const featureVals = X.map(row => row[f]);
+    // Sort unique split candidates
+    const sorted = Array.from(new Set(featureVals)).sort((a, b) => a - b);
 
-    // Feature 2: recentPainIncidentCount (0, 1, 2, 3)
-    const randPain = Math.random();
-    const recentPainCount = randPain < 0.70 ? 0 : (randPain < 0.90 ? 1 : (randPain < 0.97 ? 2 : 3));
+    for (let i = 0; i < sorted.length - 1; i += Math.max(1, Math.floor(sorted.length / 20))) {
+      const threshold = (sorted[i] + sorted[i + 1]) / 2;
 
-    // Feature 3: daysSinceLastSession (0 to 7)
-    const daysSinceLast = Math.floor(Math.random() * 8);
+      let leftSum = 0, leftWeight = 0;
+      let rightSum = 0, rightWeight = 0;
 
-    // Feature 4: painSeverityWeight (0.0=none, 0.3=low, 0.6=medium, 1.0=high)
-    let painSeverityWeight = 0.0;
-    if (recentPainCount > 0) {
-      const randSev = Math.random();
-      painSeverityWeight = randSev < 0.4 ? 0.3 : (randSev < 0.8 ? 0.6 : 1.0);
+      for (let s = 0; s < numSamples; s++) {
+        if (X[s][f] <= threshold) {
+          leftSum += y[s];
+          leftWeight += 1;
+        } else {
+          rightSum += y[s];
+          rightWeight += 1;
+        }
+      }
+
+      if (leftWeight === 0 || rightWeight === 0) continue;
+
+      const leftVal = leftSum / leftWeight;
+      const rightVal = rightSum / rightWeight;
+
+      let totalErr = 0;
+      for (let s = 0; s < numSamples; s++) {
+        const pred = X[s][f] <= threshold ? leftVal : rightVal;
+        const diff = y[s] - pred;
+        totalErr += diff * diff;
+      }
+
+      if (totalErr < minError) {
+        minError = totalErr;
+        bestFeature = f;
+        bestThreshold = threshold;
+        bestLeftVal = leftVal;
+        bestRightVal = rightVal;
+      }
     }
-
-    // Physiological Target Formula with realistic variance
-    const noise = (Math.random() - 0.5) * 0.08;
-    let targetScore = 0.88 - (avgDifficulty - 3.0) * 0.08 + (avgCompletion - 0.8) * 0.12 - painSeverityWeight * 0.35 - recentPainCount * 0.05 + noise;
-    targetScore = Math.max(0.20, Math.min(1.00, parseFloat(targetScore.toFixed(3))));
-
-    // Model Prediction (Continuous Regression)
-    const predictedScore = Math.max(0.20, Math.min(1.00, parseFloat((0.88 - (avgDifficulty - 3.0) * 0.08 + (avgCompletion - 0.8) * 0.12 - painSeverityWeight * 0.35 - recentPainCount * 0.05).toFixed(3))));
-
-    const error = targetScore - predictedScore;
-    totalSquaredError += error * error;
-    totalAbsoluteError += Math.abs(error);
-
-    rows.push([
-      avgDifficulty,
-      avgCompletion,
-      recentPainCount,
-      daysSinceLast,
-      painSeverityWeight,
-      targetScore
-    ].join(','));
   }
 
-  const rmse = Math.sqrt(totalSquaredError / numSamples).toFixed(4);
-  const mae = (totalAbsoluteError / numSamples).toFixed(4);
-
-  const dataDir = path.join(__dirname, '..', 'data');
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
-  }
-
-  const csvPath = path.join(dataDir, 'synthetic_recovery_dataset.csv');
-  fs.writeFileSync(csvPath, rows.join('\n'));
-
-  console.log(`====================================================`);
-  console.log(`FitMotionAI Athlete Recovery Model Training & Export`);
-  console.log(`====================================================`);
-  console.log(`Dataset Generated: 3,000 athlete recovery rows`);
-  console.log(`Dataset Saved To:  ${csvPath}`);
-  console.log(`Evaluation RMSE:   ${rmse}`);
-  console.log(`Evaluation MAE:    ${mae}`);
-  console.log(`Status:            SUCCESS`);
+  return {
+    feature: bestFeature,
+    threshold: bestThreshold,
+    leftVal: bestLeftVal,
+    rightVal: bestRightVal,
+  };
 }
 
-generateDataset(3000);
+function trainGradientBoosting(X_train, y_train, nTrees = 20, learningRate = 0.1) {
+  const trees = [];
+  const meanTarget = y_train.reduce((a, b) => a + b, 0) / y_train.length;
+  let residuals = y_train.map(y => y - meanTarget);
+
+  for (let t = 0; t < nTrees; t++) {
+    const stump = trainStump(X_train, residuals);
+    trees.push(stump);
+
+    // Update residuals
+    for (let s = 0; s < X_train.length; s++) {
+      const pred = X_train[s][stump.feature] <= stump.threshold ? stump.leftVal : stump.rightVal;
+      residuals[s] -= learningRate * pred;
+    }
+  }
+
+  return { baseVal: meanTarget, learningRate, trees };
+}
+
+function predictModel(model, row) {
+  let val = model.baseVal;
+  for (const stump of model.trees) {
+    const pred = row[stump.feature] <= stump.threshold ? stump.leftVal : stump.rightVal;
+    val += model.learningRate * pred;
+  }
+  return Math.max(0.20, Math.min(1.00, val));
+}
+
+function runTraining() {
+  const csvPath = path.join(__dirname, '..', 'data', 'synthetic_recovery_dataset.csv');
+  if (!fs.existsSync(csvPath)) {
+    console.error(`CSV file not found at ${csvPath}`);
+    return;
+  }
+
+  console.log(`Reading dataset from ${csvPath}...`);
+  const lines = fs.readFileSync(csvPath, 'utf8').trim().split('\n');
+  const header = lines[0].split(',');
+  const featureNames = header.slice(0, 5);
+
+  const X = [];
+  const y = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const parts = lines[i].split(',').map(Number);
+    if (parts.length < 6 || parts.some(isNaN)) continue;
+    X.push(parts.slice(0, 5));
+    y.push(parts[5]);
+  }
+
+  console.log(`Loaded ${X.length} dataset rows.`);
+
+  // 80% Train / 20% Test Split
+  const splitIdx = Math.floor(X.length * 0.8);
+  const X_train = X.slice(0, splitIdx);
+  const y_train = y.slice(0, splitIdx);
+  const X_test = X.slice(splitIdx);
+  const y_test = y.slice(splitIdx);
+
+  console.log(`Split dataset: ${X_train.length} training rows, ${X_test.length} testing rows.`);
+  console.log(`Training Gradient Boosted Decision Tree Regressor Ensemble (20 Trees)...`);
+
+  const model = trainGradientBoosting(X_train, y_train, 20, 0.1);
+
+  // Evaluate on Test Set
+  let totalSqErr = 0;
+  let totalAbsErr = 0;
+
+  for (let i = 0; i < X_test.length; i++) {
+    const pred = predictModel(model, X_test[i]);
+    const actual = y_test[i];
+    const err = actual - pred;
+    totalSqErr += err * err;
+    totalAbsErr += Math.abs(err);
+  }
+
+  const rmse = Math.sqrt(totalSqErr / X_test.length).toFixed(4);
+  const mae = (totalAbsErr / X_test.length).toFixed(4);
+
+  console.log(`====================================================`);
+  console.log(`XGBoost/Gradient Boosted Model Evaluation Summary`);
+  console.log(`====================================================`);
+  console.log(`Ensemble Size:   20 Decision Stumps`);
+  console.log(`Evaluation RMSE: ${rmse}`);
+  console.log(`Evaluation MAE:  ${mae}`);
+  console.log(`Status:          TRAINED & VERIFIED`);
+
+  const exportPayload = {
+    modelType: "GradientBoostedDecisionTrees",
+    features: featureNames,
+    baseVal: model.baseVal,
+    learningRate: model.learningRate,
+    rmse: parseFloat(rmse),
+    mae: parseFloat(mae),
+    trees: model.trees,
+  };
+
+  const assetsDir = path.join(__dirname, '..', 'assets', 'ml');
+  if (!fs.existsSync(assetsDir)) {
+    fs.mkdirSync(assetsDir, { recursive: true });
+  }
+
+  const paramsPath = path.join(assetsDir, 'recovery_model_params.json');
+  fs.writeFileSync(paramsPath, JSON.stringify(exportPayload, null, 2));
+  console.log(`Exported model parameters to: ${paramsPath}`);
+}
+
+runTraining();

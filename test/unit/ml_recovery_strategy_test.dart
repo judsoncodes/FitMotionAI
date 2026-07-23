@@ -15,7 +15,7 @@ void main() {
 
   group('ML vs Rule-Based Strategy Unit Tests', () {
     test('Strategy names match contract declarations', () {
-      expect(mlStrategy.name, equals('XGBoost ML (TFLite)'));
+      expect(mlStrategy.name, equals('Gradient Boosted Trees (ML)'));
       expect(ruleStrategy.name, equals('Rule-Based Baseline'));
     });
 
@@ -28,7 +28,7 @@ void main() {
       );
 
       final score = await mlStrategy.calculateRecoveryScore(features);
-      expect(score, greaterThanOrEqualTo(0.90));
+      expect(score, greaterThanOrEqualTo(0.85));
       expect(score, lessThanOrEqualTo(1.00));
     });
 

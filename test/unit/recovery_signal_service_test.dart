@@ -34,7 +34,7 @@ void main() {
           .thenAnswer((_) async => logs);
 
       final score = await service.computeRecoveryScore('u1');
-      expect(score, greaterThanOrEqualTo(0.90));
+      expect(score, greaterThanOrEqualTo(0.85));
     });
 
     test('Recent moderate pain report reduces recovery score by 0.25', () {

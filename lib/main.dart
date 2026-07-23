@@ -22,7 +22,7 @@ void main() async {
     if (kIsWeb) {
       FirebaseFirestore.instance.settings = const Settings(
         persistenceEnabled: false,
-        experimentalAutoDetectLongPolling: true,
+        webExperimentalAutoDetectLongPolling: true,
       );
     }
   } catch (e) {
